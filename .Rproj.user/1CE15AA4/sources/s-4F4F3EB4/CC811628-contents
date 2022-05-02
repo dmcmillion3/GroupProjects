@@ -1,0 +1,58 @@
+library(ggplot2)
+
+spotifytoptracks <- read_csv("spotifytoptracks.csv")
+Spotify <- spotifytoptracks[,-5]
+Spotify <- Spotify[,-8]
+names(Spotify)[1] <- "rank"
+
+ggplot(Spotify) + geom_bar(aes(genre), color = "red", fill = "white") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Number of Songs on Top 50 Most Played",
+       x = "Genre",
+       y = "Count")
+
+Energy <- Spotify[order(-Spotify$energy), c(1,2,4,5,15)]
+Energy <- Energy[-16:-50,]
+ggplot(Energy, aes(track_name, energy)) +
+  geom_point(aes(size = 1, colour = factor(genre))) +
+  geom_text(aes(label = rank), hjust = 0, vjust = 0) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Energy Levels",
+       subtitle = "Top 15 Energetic Songs",
+       x = "Song Name",
+       y = "Energy")
+
+Tempo <- Spotify[order(-Spotify$tempo), c(1,2,4,13,15)]
+Tempo <- Tempo[-16:-50,]
+ggplot(Tempo, aes(track_name, tempo)) +
+  geom_point(aes(size = 1, colour = factor(genre))) +
+  geom_text(aes(label = rank), hjust = 0, vjust = 0) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Tempo",
+       subtitle = "Top 15 Songs w/Tempo",
+       x = "Song Name",
+       y = "Tempo")
+
+Live <- Spotify[order(-Spotify$liveness), c(1,2,4,11,15)]
+Live <- Live[-16:-50,]
+ggplot(Live, aes(track_name, liveness)) +
+  geom_point(aes(size = 1, colour = factor(genre))) +
+  geom_text(aes(label = rank), hjust = 0, vjust = 0) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Liveness",
+       subtitle = "Top 15 Songs w/Liveness",
+       x = "Song Name",
+       y = "Liveness")
+
+
+KeyDuration <- Spotify[order(-Spotify$duration_ms), c(1,2,4,7,14,15)]
+KeyDuration <- KeyDuration[-16:-50,]
+ggplot(KeyDuration, aes(track_name, duration_ms,)) +
+  geom_point(aes(size = 1)) +
+  geom_point(colour = "black", fill = "white", size = 5) +
+  geom_text(aes(label = rank), hjust = 0, vjust = 0) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  labs(title = "Song Length/Key",
+       subtitle = "Top 15 Longest Songs",
+       x = "Song Name",
+       y = "Length")
