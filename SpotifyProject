@@ -1,0 +1,287 @@
+---
+title: "FINAL PROJECT"
+author: "Group 11"
+date: "2023-04-22"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+#LIBRARIES USED
+library(shiny)
+library(dplyr)
+library(tm)
+library(readr)
+library(ggpubr)
+library(wordcloud)
+library(ggplot2)
+library(RColorBrewer)
+library(hrbrthemes)
+```
+
+```{r}
+#DATA CLEANING 
+#load the data
+spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+colSums(is.na(spotify_songs)) #check the number of NAs
+spotify_songs <- na.omit(spotify_songs) #remove rows w NAs
+spotify_songs <- distinct(spotify_songs, track_name, .keep_all = TRUE) #removes duplicates
+spotify_songs <- spotify_songs %>% select(-c(track_id, playlist_id,playlist_name,track_album_id,playlist_subgenre)) #remove uneccesary columns 
+spotify_songs$track_album_release_date <- substring(spotify_songs$track_album_release_date, 1, 4) #extracts only the year information
+```
+
+```{r}
+#ANALYSIS 1: WORD CLOUD ANALYSIS
+SpotifyTrack <- spotify_songs$track_name #extract track names
+SpotCorp <- Corpus(VectorSource(SpotifyTrack)) #create a corpus
+
+#remove numbers, punctuation, white space
+SpotCorp <- tm_map(SpotCorp, removeNumbers)
+SpotCorp <- tm_map(SpotCorp, removePunctuation)
+SpotCorp <- tm_map(SpotCorp, stripWhitespace)
+
+#convert to lowercase
+SpotCorp <- tm_map(SpotCorp, content_transformer(tolower))
+
+#remove common english words
+SpotCorp <- tm_map(SpotCorp, removeWords, stopwords("english"))
+
+# remove additional unnecessary words that are often found in song titles 
+SpotCorp <- tm_map(SpotCorp, removeWords, c("remix", "feat", "featuring", "radio", "edit", "version", "remastered", "original", "mix", "remaster"))
+
+tdm <- TermDocumentMatrix(SpotCorp) #create tdm
+
+matrix <- as.matrix(tdm) #convert tdm to matrix
+v <- sort(rowSums(matrix), decreasing = TRUE) #calculate frequency of each word 
+data <- data.frame(word = names(v), freq = v) #create data frame of word frequency 
+
+#create word cloud
+wordcloud(data$word, data$freq, random.order = FALSE, rot.per = 0, scale = c(6.0, .7), max.words = 125, colors = brewer.pal(10, "PuOr")) 
+```
+```{r}
+#ANALYSIS 2: LINEAR ANALYSIS 
+
+#Load cleaned dataset
+spotData <- read.csv("spotifysongs.csv")
+spotDF<-as.data.frame(spotData)
+
+#create dataframes for each genre
+SpotPopDF<-spotDF[which(spotDF$playlist_genre =="pop"),]
+SpotEdmDF<-spotDF[which(spotDF$playlist_genre =="edm"),]
+SpotRapDF<-spotDF[which(spotDF$playlist_genre =="rap"),]
+Spot_RB_DF<-spotDF[which(spotDF$playlist_genre =="r&b"),]
+SpotLatinDF<-spotDF[which(spotDF$playlist_genre =="latin"),]
+SpotRockDF<-spotDF[which(spotDF$playlist_genre =="rock"),]
+
+
+#perform linear analysis for ALL variables for the entire dataset using track popularity as the response variable 
+Reg_Date<-lm(formula = spotDF$track_popularity~spotDF$track_album_release_date+spotDF$danceability+spotDF$energy+spotDF$key+spotDF$loudness+
+               spotDF$mode+spotDF$speechiness+spotDF$acousticness+spotDF$instrumentalness+spotDF$liveness+
+               spotDF$valence+spotDF$tempo+spotDF$duration_ms)
+
+#summarize regression results
+summary(Reg_Date)
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+All_Duration<-ggplot(spotDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+All_Energy<-ggplot(spotDF,aes(x=energy,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+All_Loud<-ggplot(spotDF,aes(x=loudness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+All_acoust<-ggplot(spotDF,aes(x=acousticness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(All_Duration,All_Energy,All_Loud,All_acoust)
+```
+
+```{r}
+#############
+#Pop Genre
+#############
+
+#perform linear analysis for all variables for pop genre using track popularity as the response variable 
+Reg_Pop<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+                                mode+speechiness+acousticness+instrumentalness+liveness+
+                                valence+tempo+duration_ms,data = SpotPopDF)
+#summarize regression results
+summary(Reg_Pop)
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+Pop_Duration<-ggplot(SpotPopDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Pop_Dancability<-ggplot(SpotPopDF,aes(x=danceability,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Pop_Loud<-ggplot(SpotPopDF,aes(x=loudness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Pop_Instrumental<-ggplot(SpotPopDF,aes(x=instrumentalness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(Pop_Duration,Pop_Dancability,Pop_Loud,Pop_Instrumental)
+```
+
+```{r}
+#############
+#Rap Section
+#############
+
+#perform linear analysis for all variables for rap genre using track popularity as the response variable 
+Reg_Rap<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+              mode+speechiness+acousticness+instrumentalness+liveness+
+              valence+tempo+duration_ms,data = SpotRapDF)
+
+#summarize regression results
+summary(Reg_Rap)
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+Rap_Duration<-ggplot(SpotRapDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rap_Loud<-ggplot(SpotRapDF,aes(x=loudness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rap_Dance<-ggplot(SpotRapDF,aes(x=danceability,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rap_Energy<-ggplot(SpotRapDF,aes(x=energy,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(Rap_Duration,Rap_Loud,Rap_Dance,Rap_Energy)
+```
+
+```{r}
+#############
+#R&B Section
+#############
+
+#perform linear analysis for all variables for r&b genre using track popularity as the response variable 
+Reg_RB<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+              mode+speechiness+acousticness+instrumentalness+liveness+
+              valence+tempo+duration_ms,data = Spot_RB_DF)
+#summarize regression results
+summary(Reg_RB)
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+RB_Duration<-ggplot(Spot_RB_DF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+RB_Loud<-ggplot(Spot_RB_DF,aes(x=loudness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+RB_Instrumental<-ggplot(Spot_RB_DF,aes(x=instrumentalness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+RB_Live<-ggplot(Spot_RB_DF,aes(x=liveness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(RB_Duration,RB_Loud,RB_Instrumental,RB_Live)
+```
+
+```{r}
+#############
+#Latin Section
+#############
+
+#perform linear analysis for all variables for latin genre using track popularity as the response variable 
+Reg_Latin<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+                mode+speechiness+acousticness+instrumentalness+liveness+
+                valence+tempo+duration_ms,data = SpotLatinDF)
+
+#summarize regression results
+summary(Reg_Latin)
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+Latin_Duration<-ggplot(SpotLatinDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Latin_Energy<-ggplot(SpotLatinDF,aes(x=energy,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Latin_Loud<-ggplot(SpotLatinDF,aes(x=loudness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Latin_Instrumental<-ggplot(SpotLatinDF,aes(x=instrumentalness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(Latin_Duration,Latin_Energy,Latin_Loud,Latin_Instrumental)
+```
+
+```{r}
+#############
+#EDM Section
+#############
+
+#perform linear analysis for all variables for EDM genre using track popularity as the response variable 
+Reg_EDM<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+                   mode+speechiness+acousticness+instrumentalness+liveness+
+                   valence+tempo+duration_ms,data = SpotEdmDF)
+
+#summarize regression results
+summary(Reg_EDM) 
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+EDM_Duration<-ggplot(SpotEdmDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+EDM_Energy<-ggplot(SpotEdmDF,aes(x=energy,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+EDM_Acoustic<-ggplot(SpotEdmDF,aes(x=acousticness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+EDM_Instrumental<-ggplot(SpotEdmDF,aes(x=instrumentalness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(EDM_Duration,EDM_Energy,EDM_Acoustic,EDM_Instrumental)
+```
+
+```{r}
+#############
+#Rock Section
+#############
+
+#perform linear analysis for all variables for rock genre using track popularity as the response variable 
+Reg_Rock<-lm(formula = track_popularity~track_album_release_date+danceability+energy+key+loudness+
+               mode+speechiness+acousticness+instrumentalness+liveness+
+               valence+tempo+duration_ms,data = SpotRockDF)
+
+#summarize regression results
+summary(Reg_Rock)  
+
+#create a scatterplot for each of the 4 best predictor variables vs. track popularity with a linear regression line 
+Rock_Duration<-ggplot(SpotRockDF,aes(x=duration_ms,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rock_Release<-ggplot(SpotRockDF,aes(x=track_album_release_date,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rock_Instrumental<-ggplot(SpotRockDF,aes(x=instrumentalness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+Rock_Live<-ggplot(SpotRockDF,aes(x=liveness,y=track_popularity))+geom_point()+stat_smooth(method = "lm",col = "chartreuse")
+
+#arrange the 4 scatterplots into a grid layout
+ggarrange(Rock_Duration,Rock_Release,Rock_Instrumental,Rock_Live)
+```
+
+```{r}
+#ANALYSIS 3: SHINY APPLICATION
+
+#define the user interface
+ui <- fluidPage(
+  titlePanel("Song Popularity vs Audio Feature"), #create a title panel
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("artist_input", "Select an artist:", 
+                  choices = unique(spotify_songs$track_artist), #create a select input for choosing an artist
+                  selected = "Taylor Swift"), #set a default artist
+      selectInput("audio_feature_x_input", "Select an audio feature for the x-axis:",
+                  choices = c("danceability", "energy", "loudness", "speechiness", "acousticness", "instrumentalness", "liveness", "valence", "tempo")) # create a select input for choosing an audio feature
+    ),
+    mainPanel(
+      plotOutput("audio_features_plot", width = "90%", height = "700px") #create a plot output
+    )
+  )
+)
+
+#define the server 
+server <- function(input, output) {
+  # create a reactive function for filtering the songs of the selected artis
+  artist_songs <- reactive({
+    spotify_songs %>%
+      filter(track_artist == input$artist_input)
+  })
+  
+  # create a plot output using the reactive data
+  output$audio_features_plot <- renderPlot({
+    plot_data <- artist_songs() %>%
+      select_at(vars(input$audio_feature_x_input, track_popularity, playlist_genre))
+    
+    # calculate correlation coefficient
+    corr_coeff <- cor(plot_data[[input$audio_feature_x_input]], plot_data$track_popularity)
+    
+    # plot data
+    ggplot(plot_data, aes(x = as.numeric(.data[[input$audio_feature_x_input]]), y = track_popularity, color = playlist_genre)) + #set aesthetics
+      geom_point(size = 5, alpha = 0.8) + #add a point layer
+      geom_smooth(method = "lm", se = FALSE, color = "grey") + #add regression line
+      labs(x = input$audio_feature_x_input, y = "Track Popularity", color = "Track Genre", 
+           title = paste0("Song Popularity vs. ", input$audio_feature_x_input, " for ", input$artist_input)) + #set labels
+      theme_ipsum()+ #apply theme
+      theme(legend.position = "bottom",  #set legend position
+            legend.key.size = unit(2, "cm"), #set legend size
+            legend.title = element_text("Music Genres"), #sset legend title
+            legend.box = "horizontal", #set legend orientation
+            legend.text = element_text(size = 15)) + #set legend text size
+      annotate("text", x = Inf, y = Inf, label = ifelse(corr_coeff < 0, "There is a negative correlation between these two variables", "There is a positive correlation between these two variables"), hjust = 1, vjust = 1, size = 5, color = "black") #add annotation of correlation
+    })
+}
+
+# run application
+shinyApp(ui = ui, server = server)
+```
+
