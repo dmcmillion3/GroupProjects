@@ -1,44 +1,25 @@
----
-title: "FINAL PROJECT"
-author: "Group 11"
-date: "2023-04-22"
-output:
-  html_document: default
-  pdf_document: default
----
-
-```{r setup, include=FALSE}
-#LIBRARIES USED
-library(shiny)
-library(dplyr)
-library(tm)
-library(readr)
-library(ggpubr)
-library(wordcloud)
-library(ggplot2)
-library(RColorBrewer)
-library(hrbrthemes)
-```
-
-```{r}
 #DATA CLEANING 
 #load the data
 spotify_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+
 colSums(is.na(spotify_songs)) #check the number of NAs
+
 spotify_songs <- na.omit(spotify_songs) #remove rows w NAs
 spotify_songs <- distinct(spotify_songs, track_name, .keep_all = TRUE) #removes duplicates
 spotify_songs <- spotify_songs %>% select(-c(track_id, playlist_id,playlist_name,track_album_id,playlist_subgenre)) #remove uneccesary columns 
 spotify_songs$track_album_release_date <- substring(spotify_songs$track_album_release_date, 1, 4) #extracts only the year information
-```
 
-```{r}
 #ANALYSIS 1: WORD CLOUD ANALYSIS
 SpotifyTrack <- spotify_songs$track_name #extract track names
 SpotCorp <- Corpus(VectorSource(SpotifyTrack)) #create a corpus
 
-#remove numbers, punctuation, white space
+#remove numbers
 SpotCorp <- tm_map(SpotCorp, removeNumbers)
+
+#remove punctuation
 SpotCorp <- tm_map(SpotCorp, removePunctuation)
+
+#remove white space
 SpotCorp <- tm_map(SpotCorp, stripWhitespace)
 
 #convert to lowercase
@@ -47,9 +28,6 @@ SpotCorp <- tm_map(SpotCorp, content_transformer(tolower))
 #remove common english words
 SpotCorp <- tm_map(SpotCorp, removeWords, stopwords("english"))
 
-# remove additional unnecessary words that are often found in song titles 
-SpotCorp <- tm_map(SpotCorp, removeWords, c("remix", "feat", "featuring", "radio", "edit", "version", "remastered", "original", "mix", "remaster"))
-
 tdm <- TermDocumentMatrix(SpotCorp) #create tdm
 
 matrix <- as.matrix(tdm) #convert tdm to matrix
@@ -57,9 +35,15 @@ v <- sort(rowSums(matrix), decreasing = TRUE) #calculate frequency of each word
 data <- data.frame(word = names(v), freq = v) #create data frame of word frequency 
 
 #create word cloud
-wordcloud(data$word, data$freq, random.order = FALSE, rot.per = 0, scale = c(6.0, .7), max.words = 125, colors = brewer.pal(10, "PuOr")) 
-```
-```{r}
+wordcloud(data$word, data$freq, random.order = FALSE, rot.per = 0, scale = c(6.0, .7), max.words = 125, colors = brewer.pal(10, "PuOr"))
+
+#GENRE POPULARITY BAR CHART 
+
+
+#create df that groups songs by genre and create bar plot of genre vs popularity 
+GenrePop <- spotify_songs %>% group_by(playlist_genre) %>% select(playlist_genre, track_popularity) %>% ggplot(aes(x = as.factor(playlist_genre) , y = track_popularity,fill = as.factor(playlist_genre))) + geom_col() + theme(legend.position = "none") + labs(title = "Genre Popularity", x = "Genre", y = "# of songs")
+GenrePop
+
 #ANALYSIS 2: LINEAR ANALYSIS 
 
 #Load cleaned dataset
@@ -91,9 +75,7 @@ All_acoust<-ggplot(spotDF,aes(x=acousticness,y=track_popularity))+geom_point()+s
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(All_Duration,All_Energy,All_Loud,All_acoust)
-```
 
-```{r}
 #############
 #Pop Genre
 #############
@@ -113,9 +95,7 @@ Pop_Instrumental<-ggplot(SpotPopDF,aes(x=instrumentalness,y=track_popularity))+g
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(Pop_Duration,Pop_Dancability,Pop_Loud,Pop_Instrumental)
-```
 
-```{r}
 #############
 #Rap Section
 #############
@@ -136,9 +116,7 @@ Rap_Energy<-ggplot(SpotRapDF,aes(x=energy,y=track_popularity))+geom_point()+stat
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(Rap_Duration,Rap_Loud,Rap_Dance,Rap_Energy)
-```
 
-```{r}
 #############
 #R&B Section
 #############
@@ -158,9 +136,7 @@ RB_Live<-ggplot(Spot_RB_DF,aes(x=liveness,y=track_popularity))+geom_point()+stat
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(RB_Duration,RB_Loud,RB_Instrumental,RB_Live)
-```
 
-```{r}
 #############
 #Latin Section
 #############
@@ -181,9 +157,7 @@ Latin_Instrumental<-ggplot(SpotLatinDF,aes(x=instrumentalness,y=track_popularity
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(Latin_Duration,Latin_Energy,Latin_Loud,Latin_Instrumental)
-```
 
-```{r}
 #############
 #EDM Section
 #############
@@ -204,9 +178,7 @@ EDM_Instrumental<-ggplot(SpotEdmDF,aes(x=instrumentalness,y=track_popularity))+g
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(EDM_Duration,EDM_Energy,EDM_Acoustic,EDM_Instrumental)
-```
 
-```{r}
 #############
 #Rock Section
 #############
@@ -227,9 +199,7 @@ Rock_Live<-ggplot(SpotRockDF,aes(x=liveness,y=track_popularity))+geom_point()+st
 
 #arrange the 4 scatterplots into a grid layout
 ggarrange(Rock_Duration,Rock_Release,Rock_Instrumental,Rock_Live)
-```
 
-```{r}
 #ANALYSIS 3: SHINY APPLICATION
 
 #define the user interface
@@ -283,5 +253,4 @@ server <- function(input, output) {
 
 # run application
 shinyApp(ui = ui, server = server)
-```
 
